@@ -12,12 +12,14 @@ var Config SysConfig
 var Redis go_tool.MyRedis
 
 func MyLog(s string) {
-	fmt.Println(s)
-	//err := go_tool.Log(s)
-	//if err!= nil {
-	//	fmt.Println(err," - ",s)
-	//}
-	//}
+	if Config.TotalConfig.IsDebug {
+		fmt.Println(s)
+	} else {
+		err := go_tool.Log(s)
+		if err != nil {
+			fmt.Println(err, " - ", s)
+		}
+	}
 }
 
 func GetConfig() (err error) {

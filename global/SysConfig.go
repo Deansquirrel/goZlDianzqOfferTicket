@@ -10,6 +10,7 @@ type totalConfig struct {
 	MinTicketNum int    `toml:"minTicketNum"`
 	SnoWorkerId  int    `toml:"snoWorkerId"`
 	SnoServer    string `toml:"snoServer"`
+	IsDebug      bool   `toml:"debug"`
 }
 
 type rabbitMqConfig struct {
