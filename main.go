@@ -10,6 +10,14 @@ import (
 )
 
 func main() {
+
+	err := global.GetConfig()
+	if err != nil {
+		fmt.Println(err)
+		global.MyLog(err.Error())
+		return
+	}
+
 	global.MyLog("程序启动")
 
 	defer func() {
@@ -22,13 +30,6 @@ func main() {
 		global.MyLog("程序退出")
 	}()
 
-	err := global.GetConfig()
-	if err != nil {
-		fmt.Println(err)
-		global.MyLog(err.Error())
-		return
-	}
-
 	app := iris.New()
 	app.Post("/", Handler)
 	err = app.Run(iris.Addr(":8080"), iris.WithoutServerError(iris.ErrServerClosed), iris.WithOptimizations)
@@ -38,31 +39,68 @@ func main() {
 }
 
 func Handler(ctx iris.Context) {
-	//===========================================================================================
-	//接受请求数据
-	request, err := Object.GetRequestByContext(ctx)
-	if err != nil {
-		global.MyLog(err.Error())
-		_, err = ctx.Write([]byte(err.Error()))
-		if err != nil {
-			global.MyLog(err.Error())
-		}
-		return
-	}
-	data, err := json.Marshal(request)
-	if err != nil {
-		global.MyLog(err.Error())
-		_, err = ctx.Write([]byte(err.Error()))
-		if err != nil {
-			global.MyLog(err.Error())
-		}
-		return
-	}
-	//===========================================================================================
-	_, err = ctx.Write(data)
+	response := getResponse(ctx)
+	_, err := ctx.Write(getResponseData(response))
 	if err != nil {
 		global.MyLog(err.Error())
 	}
-
 	return
+
+	////===========================================================================================
+	////接受请求数据
+	//request, err := Object.GetRequestCreateLittleTktByContext(ctx)
+	//if err != nil {
+	//	global.MyLog(err.Error())
+	//	_, err = ctx.Write([]byte(err.Error()))
+	//	if err != nil {
+	//		global.MyLog(err.Error())
+	//	}
+	//	return
+	//}
+	//data, err := json.Marshal(request)
+	//if err != nil {
+	//	global.MyLog(err.Error())
+	//	_, err = ctx.Write([]byte(err.Error()))
+	//	if err != nil {
+	//		global.MyLog(err.Error())
+	//	}
+	//	return
+	//}
+	////===========================================================================================
+	//_, err = ctx.Write(data)
+	//_, err = ctx.Write([]byte(strconv.Itoa(ctx.GetStatusCode())))
+	//if err != nil {
+	//	global.MyLog(err.Error())
+	//}
+	//return
+}
+
+func getResponse(ctx iris.Context) (response Object.ResponseCreateLittleTkt) {
+	global.MyLog("获取请求内容")
+	request, err := Object.GetRequestCreateLittleTktByContext(ctx)
+	if err != nil {
+		return getErrorResponse(request, ctx, err)
+	}
+	global.MyLog("检查请求内容")
+	err = request.CheckRequest()
+	if err != nil {
+		return getErrorResponse(request, ctx, err)
+	}
+	return Object.GetResponseCreateLittleTkt(ctx, &request)
+}
+
+func getResponseData(response Object.ResponseCreateLittleTkt) []byte {
+	data, err := json.Marshal(response)
+	if err != nil {
+		global.MyLog(err.Error())
+		return []byte(err.Error())
+	} else {
+		return data
+	}
+}
+
+func getErrorResponse(request Object.RequestCreateLittleTkt, ctx iris.Context, err error) (response Object.ResponseCreateLittleTkt) {
+	global.MyLog(err.Error())
+	response = Object.GetResponseCreateLittleTktError(&request, err, ctx.GetStatusCode())
+	return response
 }

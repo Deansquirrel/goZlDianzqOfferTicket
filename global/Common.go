@@ -32,10 +32,9 @@ func GetConfig() (err error) {
 	if err != nil {
 		err = errors.New("配置文件转JSON时遇到异常:" + err.Error())
 	} else {
-		fmt.Println(string(configJson))
+		MyLog(string(configJson))
 	}
-	Redis := go_tool.MyRedis{}
 	Redis.Server = Config.RedisConfig.Server
 	Redis.Auth = Config.RedisConfig.Password
-	return nil
+	return
 }

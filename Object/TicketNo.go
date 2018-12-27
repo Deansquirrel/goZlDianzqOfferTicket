@@ -1,4 +1,4 @@
-package worker
+package Object
 
 import (
 	"encoding/json"
