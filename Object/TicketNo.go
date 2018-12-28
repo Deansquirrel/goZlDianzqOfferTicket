@@ -3,6 +3,7 @@ package Object
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/global"
 	"io/ioutil"
 	"net/http"
@@ -20,7 +21,7 @@ func GetTktNoMulti(num int) ([]string, error) {
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			global.MyLog(err.Error())
+			common.MyLog(err.Error())
 		}
 	}()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -41,7 +42,7 @@ func GetSno(prefix string) (string, error) {
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			global.MyLog(err.Error())
+			common.MyLog(err.Error())
 		}
 	}()
 	sno, err := ioutil.ReadAll(resp.Body)

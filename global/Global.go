@@ -2,25 +2,14 @@ package global
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/Deansquirrel/go-tool"
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
+	"github.com/kataras/iris/core/errors"
 )
 
 var Config SysConfig
 var Redis go_tool.MyRedis
-
-func MyLog(s string) {
-	if Config.TotalConfig.IsDebug {
-		fmt.Println(s)
-	} else {
-		err := go_tool.Log(s)
-		if err != nil {
-			fmt.Println(err, " - ", s)
-		}
-	}
-}
 
 func GetConfig() (err error) {
 	_, err = toml.DecodeFile("config.toml", &Config)
@@ -32,9 +21,11 @@ func GetConfig() (err error) {
 	if err != nil {
 		err = errors.New("配置文件转JSON时遇到异常:" + err.Error())
 	} else {
-		MyLog(string(configJson))
+		common.MyLog(string(configJson))
 	}
 	Redis.Server = Config.RedisConfig.Server
 	Redis.Auth = Config.RedisConfig.Password
+
+	common.IsDebug = Config.TotalConfig.IsDebug
 	return
 }

@@ -13,8 +13,15 @@ type TktInfo struct {
 	ChTs     int       `json:"chts"`
 	TktNo    string    `json:"tktno"`
 	AccIdEnc string    `json:"accidenc"`
-	CashMy   int       `json:"cashmy"`
-	AddMy    int       `json:"addmy"`
+	CashMy   float64   `json:"cashmy"`
+	AddMy    float64   `json:"addmy"`
 	TktName  string    `json:"tktname"`
 	PCno     string    `json:"pcno"`
+}
+
+func (t *TktInfo) IsEmpty() bool {
+	if t.PCno != "" {
+		return false
+	}
+	return true
 }

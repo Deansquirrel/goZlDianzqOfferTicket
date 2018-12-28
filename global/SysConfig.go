@@ -11,11 +11,11 @@ type totalConfig struct {
 	MinTicketNum int    `toml:"minTicketNum"`
 	SnoWorkerId  int    `toml:"snoWorkerId"`
 	SnoServer    string `toml:"snoServer"`
+	AppId        string `toml:"appid"`
 	IsDebug      bool   `toml:"debug"`
 }
 
 type peiZhDbConfig struct {
-	AppId    string `toml:"appid"`
 	Server   string `toml:"server"`
 	Port     int    `toml:"port"`
 	DbName   string `toml:"dbName"`

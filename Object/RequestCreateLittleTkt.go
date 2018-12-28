@@ -1,6 +1,7 @@
 package Object
 
 import (
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/global"
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/core/errors"
@@ -44,24 +45,24 @@ func GetRequestCreateLittleTktByContext(ctx iris.Context) (request RequestCreate
 
 func (request *RequestCreateLittleTkt) CheckRequest() error {
 	if request.Body.TktInfo == nil || request.Body.CrmFqYwInfo.CrmJhh == "" || request.Body.CrmCardInfo == nil || request.Body.YwInfo.OprYwSno == "" {
-		global.MyLog("传入的记录集为空")
+		common.MyLog("传入的记录集为空")
 		return errors.New("传入的记录集为空")
 	}
 	for index := range request.Body.CrmCardInfo {
 		if request.Body.CrmCardInfo[index].CardType != 5 {
-			global.MyLog("会员券目前仅支持按账户id加密值操作")
+			common.MyLog("会员券目前仅支持按账户id加密值操作")
 			return errors.New("会员券目前仅支持按账户id加密值操作")
 		}
 	}
 	if len(request.Body.CrmCardInfo) > 100 {
-		global.MyLog("券发放（立即生效）禁止超过100张")
+		common.MyLog("券发放（立即生效）禁止超过100张")
 		return errors.New("券发放（立即生效）禁止超过100张")
 	}
 
 	val, err := global.Redis.Get(strconv.Itoa(global.Config.RedisConfig.DbId1), request.AppId+request.Body.YwInfo.OprYwSno)
 	if err != nil {
 		if err.Error() != "redigo: nil returned" {
-			global.MyLog("保存Redis时发生错误")
+			common.MyLog("保存Redis时发生错误")
 			return err
 		}
 	}

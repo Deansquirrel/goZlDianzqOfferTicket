@@ -2,8 +2,13 @@ package Object
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/Deansquirrel/goZl"
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/global"
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/repository"
 	"github.com/kataras/iris"
+	"github.com/kataras/iris/core/errors"
 	"strconv"
 	"strings"
 )
@@ -26,6 +31,7 @@ type ResponseCreateLittleTkt struct {
 
 func GetResponseCreateLittleTkt(ctx iris.Context, request *RequestCreateLittleTkt) (response ResponseCreateLittleTkt) {
 	response.BaseFunc(request, &response)
+	response.refresh()
 
 	//生成券号码
 	tktNos, err := GetTktNoMulti(len(request.Body.CrmCardInfo))
@@ -33,13 +39,13 @@ func GetResponseCreateLittleTkt(ctx iris.Context, request *RequestCreateLittleTk
 		response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
 		return
 	}
-	global.MyLog("生成的券号码")
+	common.MyLog("生成的券号码")
 	for index := range tktNos {
-		global.MyLog(tktNos[index])
+		common.MyLog(tktNos[index])
 	}
 
 	//记录redis,防止重复提交
-	global.MyLog("准备记录Reids,防止重复提交")
+	common.MyLog("准备记录Reids,防止重复提交")
 	jsonNoList, err := json.Marshal(tktNos)
 	if err != nil {
 		response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
@@ -53,37 +59,128 @@ func GetResponseCreateLittleTkt(ctx iris.Context, request *RequestCreateLittleTk
 	defer func() {
 		err = global.Redis.Del(strconv.Itoa(global.Config.RedisConfig.DbId1), request.AppId+request.Body.YwInfo.OprYwSno)
 		if err != nil {
-			global.MyLog(err.Error())
+			common.MyLog(err.Error())
 		}
 	}()
 
-	global.MyLog(string(jsonNoList))
+	common.MyLog(string(jsonNoList))
 
 	//生成电子券系统流水号
-	global.MyLog("准备生成电子券系统流水号")
+	common.MyLog("准备生成电子券系统流水号")
 	sno, err := GetSno("CT")
 	if err != nil {
 		response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
 		return
 	}
-	global.MyLog(sno)
+	common.MyLog(sno)
 
-	//通过配置库获取Hx库连接信息
-	pz := PeiZh{
-		AppId:    global.Config.PeiZhDbConfig.AppId,
-		Server:   global.Config.PeiZhDbConfig.Server,
-		Port:     global.Config.PeiZhDbConfig.Port,
-		DbName:   global.Config.PeiZhDbConfig.DbName,
-		User:     global.Config.PeiZhDbConfig.User,
-		PassWord: global.Config.PeiZhDbConfig.PassWord,
-	}
-	d, err := pz.GetHxDbInfo()
+	hxR := repository.HeXRepository{}
+	hxDbList, err := repository.GetHxDbConn(global.Config.TotalConfig.AppId)
 	if err != nil {
-		global.MyLog(err.Error())
 		response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
 		return
 	}
-	global.MyLog(strconv.Itoa(len(d)))
+	if len(hxDbList) < 1 {
+		err = errors.New("传入的APPID无效（APPID错误或配置库缺少配置）")
+		response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
+		return
+	}
+
+	t := conftools.ConfTools{}
+	tktInfos := make([]TktInfo, 0)
+	tktReturnInfos := make([]TktReturnInfo, 0)
+	tktModels := make([]TktModel, 0)
+	j := 0
+	for _, val := range request.Body.CrmCardInfo {
+		accIdInput, err := t.DecryptFromBase64Format(val.CardNo, "accid")
+		accIdInputLong, err := strconv.Atoi(accIdInput)
+		if err != nil {
+			response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
+			return
+		}
+		var tktInfo TktInfo
+		if request.Body.TktInfo == nil || len(request.Body.TktInfo) < 1 {
+			break
+		} else {
+			tktInfo = request.Body.TktInfo[0]
+		}
+		tktItem := TktInfo{
+			AppId:    request.AppId,
+			AccId:    accIdInputLong,
+			TktKind:  tktInfo.TktKind,
+			EffDate:  tktInfo.EffDate,
+			Deadline: tktInfo.Deadline,
+			CrYwLsh:  request.Body.YwInfo.OprYwSno,
+			CrBr:     request.Body.YwInfo.OprBrid,
+			CashMy:   tktInfo.CashMy,
+			AddMy:    tktInfo.AddMy,
+			TktName:  tktInfo.TktName,
+			PCno:     tktInfo.PCno,
+			TktNo:    tktNos[j],
+		}
+		tktInfos = append(tktInfos, tktItem)
+
+		tktRetItem := TktReturnInfo{
+			Sn:     val.Sn,
+			TktNo:  tktNos[j],
+			TktSno: sno,
+		}
+		tktReturnInfos = append(tktReturnInfos, tktRetItem)
+
+		tktModel := TktModel{
+			AccId:    accIdInputLong,
+			AddMy:    tktInfo.AddMy,
+			AppId:    request.AppId,
+			CashMy:   tktInfo.CashMy,
+			DeadLine: tktInfo.Deadline,
+			PcNo:     tktInfo.PCno,
+			EffTime:  tktInfo.EffDate,
+			TktKind:  tktInfo.TktKind,
+			TktName:  tktInfo.TktName,
+			TktNo:    tktNos[j],
+		}
+		tktModels = append(tktModels, tktModel)
+
+		j++
+	}
+
+	crTktInfo := TktCreateInfo{
+		TktInfo:       make([]TktInfo, 0),
+		TktYwInfo:     YwInfo{},
+		TktReturnInfo: make([]TktReturnInfo, 0),
+		CzLx:          2,
+		CzLxSm:        "",
+	}
+
+	for _, val := range tktInfos {
+		crTktInfo.TktInfo = append(crTktInfo.TktInfo, val)
+	}
+	crTktInfo.TktYwInfo = request.Body.YwInfo
+	for _, val := range tktReturnInfos {
+		crTktInfo.TktReturnInfo = append(crTktInfo.TktReturnInfo, val)
+	}
+
+	tkTs := TktModels{
+		TktModels: make([]TktModel, 0),
+	}
+	for _, val := range tktModels {
+		tkTs.TktModels = append(tkTs.TktModels, val)
+	}
+
+	for _, db := range hxDbList {
+		verInfo, err := hxR.GetVerInfo(db)
+		if err != nil {
+			response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
+			return
+		}
+		fmt.Println(verInfo)
+	}
+
+	if err != nil {
+		common.MyLog(err.Error())
+		response = GetResponseCreateLittleTktError(request, err, ctx.GetStatusCode())
+		return
+	}
 
 	return
 }
