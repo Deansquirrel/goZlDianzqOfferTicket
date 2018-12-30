@@ -1,6 +1,7 @@
-package Object
+package yw
 
 import (
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/Object"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/global"
 	"github.com/kataras/iris"
@@ -17,11 +18,11 @@ type RequestCreateLittleTkt struct {
 
 type requestBody struct {
 	TmpCol      int
-	TktInfo     []TktInfo
-	CrmFqYwInfo CrmFqYwInfo
-	CrmCardInfo []CrmCardInfo
-	MdFqYwInfo  []MdFqYwInfo
-	YwInfo      YwInfo
+	TktInfo     []Object.TktInfo
+	CrmFqYwInfo Object.CrmFqYwInfo
+	CrmCardInfo []Object.CrmCardInfo
+	MdFqYwInfo  []Object.MdFqYwInfo
+	YwInfo      Object.YwInfo
 }
 
 func GetRequestCreateLittleTktByContext(ctx iris.Context) (request RequestCreateLittleTkt, err error) {
@@ -59,7 +60,7 @@ func (request *RequestCreateLittleTkt) CheckRequest() error {
 		return errors.New("券发放（立即生效）禁止超过100张")
 	}
 
-	val, err := global.Redis.Get(strconv.Itoa(global.Config.RedisConfig.DbId1), request.AppId+request.Body.YwInfo.OprYwSno)
+	val, err := global.Redis.Get(strconv.Itoa(global.RedisDbId1), request.AppId+request.Body.YwInfo.OprYwSno)
 	if err != nil {
 		if err.Error() != "redigo: nil returned" {
 			common.MyLog("保存Redis时发生错误")

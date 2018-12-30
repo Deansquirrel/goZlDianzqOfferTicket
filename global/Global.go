@@ -10,6 +10,10 @@ import (
 
 var Config SysConfig
 var Redis go_tool.MyRedis
+var RedisDbId1 int
+var RedisDbId2 int
+var SnoServer string
+var SnoWorkerId int
 
 func GetConfig() (err error) {
 	_, err = toml.DecodeFile("config.toml", &Config)
@@ -23,9 +27,6 @@ func GetConfig() (err error) {
 	} else {
 		common.MyLog(string(configJson))
 	}
-	Redis.Server = Config.RedisConfig.Server
-	Redis.Auth = Config.RedisConfig.Password
-
 	common.IsDebug = Config.TotalConfig.IsDebug
 	return
 }

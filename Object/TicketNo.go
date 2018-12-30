@@ -13,7 +13,7 @@ type TicketNo struct {
 }
 
 func GetTktNoMulti(num int) ([]string, error) {
-	rUrl := fmt.Sprintf("%s/Api/Number/GetTktNo_Multi?workerId=%d&nums=%d", global.Config.TotalConfig.SnoServer, global.Config.TotalConfig.SnoWorkerId, num)
+	rUrl := fmt.Sprintf("%s/Api/Number/GetTktNo_Multi?workerId=%d&nums=%d", global.SnoServer, global.SnoWorkerId, num)
 	resp, err := http.Get(rUrl)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func GetTktNoMulti(num int) ([]string, error) {
 }
 
 func GetSno(prefix string) (string, error) {
-	rUrl := fmt.Sprintf("%s/Api/Number/GetSno?workerId=%d&&prefix=%s", global.Config.TotalConfig.SnoServer, global.Config.TotalConfig.SnoWorkerId, prefix)
+	rUrl := fmt.Sprintf("%s/Api/Number/GetSno?workerId=%d&&prefix=%s", global.SnoServer, global.SnoWorkerId, prefix)
 	resp, err := http.Get(rUrl)
 	if err != nil {
 		return "", err

@@ -3,19 +3,24 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Deansquirrel/goZlDianzqOfferTicket/Object"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/global"
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/repository"
+	"github.com/Deansquirrel/goZlDianzqOfferTicket/yw"
 	"github.com/kataras/iris"
+	"github.com/kataras/iris/core/errors"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func main() {
 
-	err := global.GetConfig()
+	err := refreshConfig()
 	if err != nil {
-		fmt.Println(err)
-		common.MyLog(err.Error())
+		errMsg := "获取配置时遇到问题:" + err.Error()
+		fmt.Println(errMsg)
+		common.MyLog(errMsg)
 		return
 	}
 
@@ -33,7 +38,8 @@ func main() {
 
 	app := iris.New()
 	app.Post("/", Handler)
-	err = app.Run(iris.Addr(":8080"), iris.WithoutServerError(iris.ErrServerClosed), iris.WithOptimizations)
+	addr := ":" + strconv.Itoa(global.Config.TotalConfig.Port)
+	err = app.Run(iris.Addr(addr), iris.WithoutServerError(iris.ErrServerClosed), iris.WithOptimizations)
 	if err != nil {
 		common.MyLog(err.Error())
 	}
@@ -76,8 +82,8 @@ func Handler(ctx iris.Context) {
 	//return
 }
 
-func getResponse(ctx iris.Context) (response Object.ResponseCreateLittleTkt) {
-	request, err := Object.GetRequestCreateLittleTktByContext(ctx)
+func getResponse(ctx iris.Context) (response yw.ResponseCreateLittleTkt) {
+	request, err := yw.GetRequestCreateLittleTktByContext(ctx)
 	if err != nil {
 		return getErrorResponse(request, ctx, err)
 	}
@@ -85,10 +91,10 @@ func getResponse(ctx iris.Context) (response Object.ResponseCreateLittleTkt) {
 	if err != nil {
 		return getErrorResponse(request, ctx, err)
 	}
-	return Object.GetResponseCreateLittleTkt(ctx, &request)
+	return yw.GetResponseCreateLittleTkt(ctx, &request)
 }
 
-func getResponseData(response Object.ResponseCreateLittleTkt) []byte {
+func getResponseData(response yw.ResponseCreateLittleTkt) []byte {
 	data, err := json.Marshal(response)
 	if err != nil {
 		common.MyLog(err.Error())
@@ -98,8 +104,70 @@ func getResponseData(response Object.ResponseCreateLittleTkt) []byte {
 	}
 }
 
-func getErrorResponse(request Object.RequestCreateLittleTkt, ctx iris.Context, err error) (response Object.ResponseCreateLittleTkt) {
+func getErrorResponse(request yw.RequestCreateLittleTkt, ctx iris.Context, err error) (response yw.ResponseCreateLittleTkt) {
 	common.MyLog(err.Error())
-	response = Object.GetResponseCreateLittleTktError(&request, err, ctx.GetStatusCode())
+	response = yw.GetResponseCreateLittleTktError(&request, err, ctx.GetStatusCode())
 	return response
+}
+
+func refreshConfig() error {
+	//获取toml配置
+	err := global.GetConfig()
+	if err != nil {
+		fmt.Println(err)
+		common.MyLog(err.Error())
+		return err
+	}
+
+	pZhR := repository.PeiZhRepository{}
+
+	//获取Redis连接信息
+	redisConfigStr, err := pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "SERedis", 0)
+	if err != nil {
+		return err
+	}
+	redisConfig := strings.Split(redisConfigStr, "|")
+	if len(redisConfig) != 2 {
+		return errors.New("redis配置参数异常.expected 2 , got " + strconv.Itoa(len(redisConfig)))
+	}
+	global.Redis.Server = redisConfig[0]
+	global.Redis.Auth = redisConfig[1]
+
+	redisDbId1Str, err := pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "RedisDbId1", 0)
+	if err != nil {
+		return err
+	}
+	global.RedisDbId1, err = strconv.Atoi(redisDbId1Str)
+	if err != nil {
+		return err
+	}
+
+	redisDbId2Str, err := pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "RedisDbId2", 0)
+	if err != nil {
+		return err
+	}
+	global.RedisDbId2, err = strconv.Atoi(redisDbId2Str)
+	if err != nil {
+		return err
+	}
+
+	//获取SnoServer信息
+	global.SnoServer, err = pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "SnoServer", 0)
+	if err != nil {
+		return err
+	}
+	snoWorkIdStr, err := pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "WorkerId", 0)
+	if err != nil {
+		return err
+	}
+	global.SnoWorkerId, err = strconv.Atoi(snoWorkIdStr)
+	if err != nil {
+		return err
+	}
+	global.SnoWorkerId, err = strconv.Atoi(snoWorkIdStr)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

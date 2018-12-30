@@ -25,3 +25,14 @@ func GetDbConn(server string, port int, dbName string, user string, pwd string) 
 	conn.SetConnMaxLifetime(time.Second * 60 * 10)
 	return conn, nil
 }
+
+//检查数据库连接是否有效
+func CheckV(db *sql.DB) bool {
+	if db != nil {
+		err := db.Ping()
+		if err == nil {
+			return true
+		}
+	}
+	return false
+}
