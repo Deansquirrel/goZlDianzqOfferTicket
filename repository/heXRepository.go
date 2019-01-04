@@ -3,9 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/Object"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
 	"strconv"
@@ -46,173 +44,32 @@ func (hx *HeXRepository) CreateLittleTktCreate(conn *sql.DB, tktInfo []Object.Tk
 		}
 	}()
 
-	_, err = c.ExecContext(ctx, "CREATE TABLE #TktInfo"+
-		"("+
-		"    Appid	varchar(30),"+
-		"    Accid	bigint,"+
-		"    Tktno	varchar(30),"+
-		"    Cashmy	decimal(18,2),"+
-		"    Addmy	decimal(18,2),"+
-		"    Tktname	nvarchar(30),"+
-		"    TktKind	varchar(30),"+
-		"    Pcno	varchar(30),"+
-		"    EffDate	smalldatetime,"+
-		"    Deadline	smalldatetime,"+
-		"    CrYwlsh	varchar(12),"+
-		"    CrBr	varchar(30)"+
-		")")
+	tx,err := conn.Begin()
 	if err != nil {
 		return err
 	}
+	defer func(){
+		if err != nil {
+			_ = tx.Rollback()
+		} else {
+			_ = tx.Commit()
+		}
+	}()
 
-	//stmt,err := c.PrepareContext(ctx,"" +
-	//	"insert into #TktInfo(Appid,Accid,Tktno,Cashmy,Addmy,Tktname,TktKind,Pcno,EffDate,Deadline,CrYwlsh,CrBr)" +
-	//	"select ?,?,?,?,?,?,?,?,?,?,?,?")
-	//if err != nil {
-	//	return nil
-	//}
-	//defer func(){
-	//	errLs := stmt.Close()
-	//	if errLs != nil {
-	//		common.MyLog(errLs.Error())
-	//	}
-	//}()
-
-	//for _,val := range tktInfo {
-	//	_,err = c.ExecContext(ctx,"insert into #TktInfo(Appid,Accid,Tktno,Cashmy,Addmy,Tktname,TktKind,Pcno,EffDate,Deadline,CrYwlsh,CrBr)" +
-	//		"select ?,?,?,?,?,?,?,?,?,?,?,?",val.AppId,val.AccId,val.TktNo,val.CashMy,val.AddMy,val.TktName,val.TktKind,val.PCno,val.EffDate,val.Deadline,val.CrYwLsh,val.CrBr)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-
-	val := tktInfo[0]
-	//_,err = c.ExecContext(ctx,"insert into #TktInfo(Appid,Accid,Tktno,Cashmy,Addmy,Tktname,TktKind,Pcno,EffDate,Deadline,CrYwlsh,CrBr)" +
-	//	"select ?,?,?,?,?,?,?,?,?,?,?,?",val.AppId,val.AccId,val.TktNo,val.CashMy,val.AddMy,val.TktName,val.TktKind,val.PCno,val.EffDate,val.Deadline,val.CrYwLsh,val.CrBr)
-	//if err != nil {
-	//	return err
-	//}
-
-	s, err := json.Marshal(val)
-	fmt.Println(string(s))
-
-	_, err = c.ExecContext(ctx, ""+
-		"exec pr_CreateLittleTkt_Create")
+	stmt,err := tx.Prepare(getCreateTempTableTktInfoSqlStr() + " " + getInsertTempTableTktInfoSqlStr() + " " + getExecProc() + " " + getDropTmepTableTktInfoSqlStr())
 	if err != nil {
-		return nil
+		return err
 	}
+	defer func(){
+		_ = stmt.Close()
+	}()
 
-	_, err = c.ExecContext(ctx, ""+
-		"drop table #TktInfo")
-	if err != nil {
-		return nil
+	for _,val := range tktInfo{
+		_,err = stmt.Exec(val.AppId,val.AccId,val.TktNo,val.CashMy,val.AddMy,val.TktName,val.TktKind,val.PCno,val.EffDate,val.Deadline,val.CrYwLsh,val.CrBr)
+		if err != nil {
+			return err
+		}
 	}
-
-	//
-	//
-	//_,err = c.Exec("CREATE TABLE #TktInfo" +
-	//	"(" +
-	//	"    Appid	varchar(30)," +
-	//	"    Accid	bigint," +
-	//	"    Tktno	varchar(30)," +
-	//	"    Cashmy	decimal(18,2)," +
-	//	"    Addmy	decimal(18,2)," +
-	//	"    Tktname	nvarchar(30)," +
-	//	"    TktKind	varchar(30)," +
-	//	"    Pcno	varchar(30)," +
-	//	"    EffDate	smalldatetime," +
-	//	"    Deadline	smalldatetime," +
-	//	"    CrYwlsh	varchar(12)," +
-	//	"    CrBr	varchar(30)" +
-	//	")")
-	//if err != nil {
-	//	return err
-	//}
-	//_,err = tx.Exec("exec pr_CreateLittleTkt_Create")
-	//if err != nil {
-	//	return err
-	//}
-	//_,errLs := tx.Exec("drop table #TktInfo")
-	//if errLs != nil {
-	//	common.MyLog(errLs.Error())
-	//}
-	//
-	//tx,err := conn.Begin()
-	//if err != nil {
-	//	return err
-	//}
-	//defer func(){
-	//	var errLs error
-	//	switch{
-	//	case err != nil:
-	//		errLs = tx.Rollback()
-	//	default:
-	//		errLs = tx.Commit()
-	//	}
-	//	if errLs != nil {
-	//		common.MyLog(errLs.Error())
-	//	}
-	//}()
-	//
-	//_,err = tx.Exec("CREATE TABLE #TktInfo" +
-	//	"(" +
-	//	"    Appid	varchar(30)," +
-	//	"    Accid	bigint," +
-	//	"    Tktno	varchar(30)," +
-	//	"    Cashmy	decimal(18,2)," +
-	//	"    Addmy	decimal(18,2)," +
-	//	"    Tktname	nvarchar(30)," +
-	//	"    TktKind	varchar(30)," +
-	//	"    Pcno	varchar(30)," +
-	//	"    EffDate	smalldatetime," +
-	//	"    Deadline	smalldatetime," +
-	//	"    CrYwlsh	varchar(12)," +
-	//	"    CrBr	varchar(30)" +
-	//	")")
-	//if err != nil {
-	//	return err
-	//}
-	//_,err = tx.Exec("exec pr_CreateLittleTkt_Create")
-	//if err != nil {
-	//	return err
-	//}
-	//_,errLs := tx.Exec("drop table #TktInfo")
-	//if errLs != nil {
-	//	common.MyLog(errLs.Error())
-	//}
-	//
-
-	//stepOne,err := conn.Prepare("" +
-	//	"CREATE TABLE #TktInfo" +
-	//	"(" +
-	//	"    Appid	varchar(30)," +
-	//	"    Accid	bigint," +
-	//	"    Tktno	varchar(30)," +
-	//	"    Cashmy	decimal(18,2)," +
-	//	"    Addmy	decimal(18,2)," +
-	//	"    Tktname	nvarchar(30)," +
-	//	"    TktKind	varchar(30)," +
-	//	"    Pcno	varchar(30)," +
-	//	"    EffDate	smalldatetime," +
-	//	"    Deadline	smalldatetime," +
-	//	"    CrYwlsh	varchar(12)," +
-	//	"    CrBr	varchar(30)" +
-	//	")")
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//stepTwo,err := conn.Prepare("" +
-	//	"exec pr_CreateLittleTkt_Create")
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//stepThree,err := conn.Prepare("" +
-	//	"drop table #TktInfo")
-	//if err != nil {
-	//	return err
-	//}
 
 	return nil
 }
@@ -250,45 +107,6 @@ func (hx *HeXRepository) GetVerInfo(conn *sql.DB) (ver VersionInfo, err error) {
 	return
 }
 
-////获取核销库连接对象
-//func GetHxDbConn(appId string) ([]*sql.DB, error) {
-//	//if heXDbConn != nil {
-//	//	flag := false
-//	//	for _, conn := range heXDbConn {
-//	//		err := conn.Ping()
-//	//		if err != nil {
-//	//			flag = true
-//	//			break
-//	//		}
-//	//	}
-//	//	if !flag {
-//	//		return heXDbConn, nil
-//	//	}
-//	//}
-//
-//	pZhR := PeiZhRepository{}
-//	dbConnInfoList,err := pZhR.GetXtMappingDbConnInfo(appId,"DB_TicketHx","TicketHx")
-//	if err != nil {
-//		return nil,err
-//	}
-//	if dbConnInfoList == nil || len(dbConnInfoList)<1 {
-//		return nil,errors.New("未获取到核销库连接信息")
-//	}
-//
-//	heXDbConn := make([]*sql.DB, 0)
-//
-//	if len(dbConnInfoList) > 0 {
-//		for _, val := range dbConnInfoList {
-//			conn, err := GetDbConnByString(val.MConnStr)
-//			if err != nil {
-//				return nil, err
-//			}
-//			heXDbConn = append(heXDbConn, conn)
-//		}
-//	}
-//	return heXDbConn, nil
-//}
-
 //解析配置字符串,并获取连接
 func (hx *HeXRepository) GetDbConnByString(s string) (*sql.DB, error) {
 	config := strings.Split(s, "|")
@@ -303,3 +121,43 @@ func (hx *HeXRepository) GetDbConnByString(s string) (*sql.DB, error) {
 	}
 	return GetDbConn(config[0], port, config[2], config[3], config[4])
 }
+
+func getCreateTempTableTktInfoSqlStr() string {
+	sqlStr := "" +
+		"CREATE TABLE #TktInfo"+
+		"("+
+		"    Appid	varchar(30),"+
+		"    Accid	bigint,"+
+		"    Tktno	varchar(30),"+
+		"    Cashmy	decimal(18,2),"+
+		"    Addmy	decimal(18,2),"+
+		"    Tktname	nvarchar(30),"+
+		"    TktKind	varchar(30),"+
+		"    Pcno	varchar(30),"+
+		"    EffDate	smalldatetime,"+
+		"    Deadline	smalldatetime,"+
+		"    CrYwlsh	varchar(12),"+
+		"    CrBr	varchar(30)"+
+		")"
+	return sqlStr
+}
+
+func getInsertTempTableTktInfoSqlStr() string {
+	sqlStr := "" +
+		"insert into #TktInfo(Appid,Accid,Tktno,Cashmy,Addmy,Tktname,TktKind,Pcno,EffDate,Deadline,CrYwlsh,CrBr) " +
+		"select ?,?,?,?,?,?,?,?,?,?,?,?"
+	return sqlStr
+}
+
+func getExecProc() string {
+	sqlStr := "" +
+		"exec pr_CreateLittleTkt_Create"
+	return sqlStr
+}
+
+func getDropTmepTableTktInfoSqlStr() string {
+	sqlStr := "" +
+		"Drop table #TktInfo"
+	return sqlStr
+}
+

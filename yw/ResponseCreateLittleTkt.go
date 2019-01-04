@@ -244,6 +244,13 @@ func createLittleTktCreate(returnTktNo int, crTktInfo Object.TktCreateInfo, tktM
 		return
 	}
 
+
+	//===============================================================================================
+	response = ResponseCreateLittleTkt{TktReturn:make([]Object.TktReturnInfo,0)}
+
+	//===============================================================================================
+
+
 	response = GetResponseCreateLittleTktError(request, errors.New("Test End"), ctx.GetStatusCode())
 	return
 }
