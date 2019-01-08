@@ -236,6 +236,7 @@ func createLittleTktCreate(returnTktNo int, crTktInfo Object.TktCreateInfo, tktM
 		return
 	}
 
+	//===============================================================================================
 	//执行Hx库存储过程
 	hxDb := dbConn[0]
 	err = hxR.CreateLittleTktCreate(hxDb, crTktInfo.TktInfo)
@@ -244,15 +245,52 @@ func createLittleTktCreate(returnTktNo int, crTktInfo Object.TktCreateInfo, tktM
 		return
 	}
 
-
 	//===============================================================================================
-	response = ResponseCreateLittleTkt{TktReturn:make([]Object.TktReturnInfo,0)}
-
+	response = ResponseCreateLittleTkt{TktReturn: make([]Object.TktReturnInfo, 0)}
+	err = redisSetTktModel(tktModels.TktModels, global.RedisDbId1)
+	if err != nil {
+		common.MyLog(err.Error())
+	}
 	//===============================================================================================
-
 
 	response = GetResponseCreateLittleTktError(request, errors.New("Test End"), ctx.GetStatusCode())
 	return
+}
+
+func redisSetTktModel(tktModels []Object.TktModel, redisDbid int) error {
+	tktInputModels := make(map[string]Object.TktModel)
+	for _, val := range tktModels {
+		tktInputModels[val.AppId+"|"+val.TktNo] = val
+	}
+
+	for key, val := range tktInputModels {
+		str, err := json.Marshal(val)
+		if err != nil {
+			common.MyLog(err.Error())
+		}
+		_, err = global.Redis.Set(strconv.Itoa(redisDbid), key, string(str))
+		if err != nil {
+			common.MyLog(err.Error())
+		}
+	}
+
+	for _, val := range tktModels {
+		if val.AccId != 0 {
+			str, err := json.Marshal(val)
+			if err != nil {
+				common.MyLog(err.Error())
+				continue
+			}
+			sKey := "AA|" + val.AppId + "|" + strconv.Itoa(val.AccId)
+			_, err = global.Redis.Set(strconv.Itoa(redisDbid), sKey, string(str))
+			if err != nil {
+				common.MyLog(err.Error())
+				continue
+			}
+		}
+	}
+
+	return nil
 }
 
 func GetResponseCreateLittleTktError(request *RequestCreateLittleTkt, err error, httpCode int) (response ResponseCreateLittleTkt) {

@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"context"
+	"bytes"
 	"database/sql"
 	"errors"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/Object"
@@ -31,44 +31,38 @@ func (hx *HeXRepository) CreateLittleTktCreate(conn *sql.DB, tktInfo []Object.Tk
 		return errors.New("传入列表不能为空")
 	}
 
-	ctx := context.TODO()
-	defer ctx.Done()
-	c, err := conn.Conn(ctx)
+	stmt, err := conn.Prepare(getQueryString(len(tktInfo)))
 	if err != nil {
 		return err
 	}
 	defer func() {
-		errLs := c.Close()
+		errLs := stmt.Close()
 		if errLs != nil {
 			common.MyLog(errLs.Error())
 		}
 	}()
 
-	tx,err := conn.Begin()
+	var c = make([]interface{}, 0)
+	var val Object.TktInfo
+	for i := 0; i < len(tktInfo); i++ {
+		val = tktInfo[i]
+		c = append(c, val.AppId)
+		c = append(c, val.AccId)
+		c = append(c, val.TktNo)
+		c = append(c, val.CashMy)
+		c = append(c, val.AddMy)
+		c = append(c, val.TktName)
+		c = append(c, val.TktKind)
+		c = append(c, val.PCno)
+		c = append(c, val.EffDate)
+		c = append(c, val.Deadline)
+		c = append(c, val.CrYwLsh)
+		c = append(c, val.CrBr)
+	}
+
+	_, err = stmt.Exec(c...)
 	if err != nil {
 		return err
-	}
-	defer func(){
-		if err != nil {
-			_ = tx.Rollback()
-		} else {
-			_ = tx.Commit()
-		}
-	}()
-
-	stmt,err := tx.Prepare(getCreateTempTableTktInfoSqlStr() + " " + getInsertTempTableTktInfoSqlStr() + " " + getExecProc() + " " + getDropTmepTableTktInfoSqlStr())
-	if err != nil {
-		return err
-	}
-	defer func(){
-		_ = stmt.Close()
-	}()
-
-	for _,val := range tktInfo{
-		_,err = stmt.Exec(val.AppId,val.AccId,val.TktNo,val.CashMy,val.AddMy,val.TktName,val.TktKind,val.PCno,val.EffDate,val.Deadline,val.CrYwLsh,val.CrBr)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -122,42 +116,55 @@ func (hx *HeXRepository) GetDbConnByString(s string) (*sql.DB, error) {
 	return GetDbConn(config[0], port, config[2], config[3], config[4])
 }
 
+func getQueryString(n int) string {
+	if n > 0 {
+		var buffer bytes.Buffer
+		buffer.WriteString(getCreateTempTableTktInfoSqlStr())
+		for i := 0; i < n; i++ {
+			buffer.WriteString(getInsertTempTableTktInfoSqlStr())
+		}
+		buffer.WriteString(getExecProc())
+		buffer.WriteString(getDropTempTableTktInfoSqlStr())
+		return buffer.String()
+	} else {
+		return ""
+	}
+}
+
 func getCreateTempTableTktInfoSqlStr() string {
-	sqlStr := "" +
-		"CREATE TABLE #TktInfo"+
-		"("+
-		"    Appid	varchar(30),"+
-		"    Accid	bigint,"+
-		"    Tktno	varchar(30),"+
-		"    Cashmy	decimal(18,2),"+
-		"    Addmy	decimal(18,2),"+
-		"    Tktname	nvarchar(30),"+
-		"    TktKind	varchar(30),"+
-		"    Pcno	varchar(30),"+
-		"    EffDate	smalldatetime,"+
-		"    Deadline	smalldatetime,"+
-		"    CrYwlsh	varchar(12),"+
-		"    CrBr	varchar(30)"+
-		")"
-	return sqlStr
+
+	var buffer bytes.Buffer
+	buffer.WriteString("CREATE TABLE #TktInfo")
+	buffer.WriteString("(")
+	buffer.WriteString("    Appid varchar(30),")
+	buffer.WriteString("    Accid bigint,")
+	buffer.WriteString("    Tktno varchar(30),")
+	buffer.WriteString("    Cashmy decimal(18,2),")
+	buffer.WriteString("    Addmy decimal(18,2),")
+	buffer.WriteString("    Tktname nvarchar(30),")
+	buffer.WriteString("    TktKind	varchar(30),")
+	buffer.WriteString("    Pcno varchar(30),")
+	buffer.WriteString("    EffDate smalldatetime,")
+	buffer.WriteString("    Deadline smalldatetime,")
+	buffer.WriteString("    CrYwlsh varchar(12),")
+	buffer.WriteString("    CrBr varchar(30)")
+	buffer.WriteString(") ")
+	return buffer.String()
 }
 
 func getInsertTempTableTktInfoSqlStr() string {
-	sqlStr := "" +
-		"insert into #TktInfo(Appid,Accid,Tktno,Cashmy,Addmy,Tktname,TktKind,Pcno,EffDate,Deadline,CrYwlsh,CrBr) " +
-		"select ?,?,?,?,?,?,?,?,?,?,?,?"
-	return sqlStr
+	var buffer bytes.Buffer
+	buffer.WriteString("insert into #TktInfo(Appid,Accid,Tktno,Cashmy,Addmy,Tktname,TktKind,Pcno,EffDate,Deadline,CrYwlsh,CrBr) ")
+	buffer.WriteString("select ?,?,?,?,?,?,?,?,?,?,?,? ")
+	return buffer.String()
 }
 
 func getExecProc() string {
-	sqlStr := "" +
-		"exec pr_CreateLittleTkt_Create"
+	sqlStr := "exec pr_CreateLittleTkt_Create "
 	return sqlStr
 }
 
-func getDropTmepTableTktInfoSqlStr() string {
-	sqlStr := "" +
-		"Drop table #TktInfo"
+func getDropTempTableTktInfoSqlStr() string {
+	sqlStr := "Drop table #TktInfo "
 	return sqlStr
 }
-
