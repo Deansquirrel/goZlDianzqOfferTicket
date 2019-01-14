@@ -151,6 +151,25 @@ func refreshConfig() error {
 		return err
 	}
 
+	//获取RabbitMQ连接信息
+	rabbitMQConfigStr, err := pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "RabbitConnection", 0)
+	if err != nil {
+		return err
+	}
+	rabbitMQConfig := strings.Split(rabbitMQConfigStr, "|")
+	if len(rabbitMQConfig) != 5 {
+		return errors.New("rabbitMQ配置参数异常.expected 5 , got " + strconv.Itoa(len(rabbitMQConfig)))
+	}
+	global.RabbitMQ.Server = rabbitMQConfig[0]
+	rabbitMQPort, err := strconv.Atoi(rabbitMQConfig[1])
+	if err != nil {
+		return err
+	}
+	global.RabbitMQ.Port = rabbitMQPort
+	global.RabbitMQ.VirtualHost = rabbitMQConfig[2]
+	global.RabbitMQ.User = rabbitMQConfig[3]
+	global.RabbitMQ.Pwd = rabbitMQConfig[4]
+
 	//获取SnoServer信息
 	global.SnoServer, err = pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "SnoServer", 0)
 	if err != nil {

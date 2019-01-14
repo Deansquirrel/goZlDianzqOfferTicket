@@ -252,6 +252,12 @@ func createLittleTktCreate(returnTktNo int, crTktInfo Object.TktCreateInfo, tktM
 		common.MyLog(err.Error())
 	}
 	//===============================================================================================
+	if returnTktNo == 1 && len(crTktInfo.TktReturnInfo) > 0 {
+		for _, val := range crTktInfo.TktReturnInfo {
+			response.TktReturn = append(response.TktReturn, val)
+		}
+	}
+	//===============================================================================================
 
 	response = GetResponseCreateLittleTktError(request, errors.New("Test End"), ctx.GetStatusCode())
 	return
