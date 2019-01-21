@@ -53,7 +53,9 @@ func (pzR *PeiZhRepository) GetXtWxAppIdJoinInfo(jPeiZh string, jKey string, jIs
 		}
 	}()
 
-	stmt, err := conn.Prepare("SELECT jvalue FROM xtwxappidjoininfo WHERE jpeizh = ? and jkey = ? AND JISFORBID = ?")
+	stmt, err := conn.Prepare("" +
+		"SELECT jvalue FROM xtwxappidjoininfo " +
+		"WHERE jpeizh = ? and jkey = ? AND JISFORBID = ?")
 	if err != nil {
 		return "", err
 	}
@@ -109,7 +111,9 @@ func (pzR *PeiZhRepository) GetXtMappingDbConnInfo(appId string, miKvName string
 		}
 	}()
 
-	stmt, err := conn.Prepare("select miid,mconnstr from xtmappingdbconn where appid = ? and miidtype = ? and mikvname = ?")
+	stmt, err := conn.Prepare("" +
+		"select miid,mconnstr " +
+		"from xtmappingdbconn where appid = ? and miidtype = ? and mikvname = ?")
 	if err != nil {
 		return nil, err
 	}

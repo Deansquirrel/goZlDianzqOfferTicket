@@ -258,9 +258,25 @@ func createLittleTktCreate(returnTktNo int, crTktInfo Object.TktCreateInfo, tktM
 		}
 	}
 	//===============================================================================================
+	_ = rabbitMqSetTktInfo(crTktInfo)
+	//===============================================================================================
 
-	response = GetResponseCreateLittleTktError(request, errors.New("Test End"), ctx.GetStatusCode())
+	//response = GetResponseCreateLittleTktError(request, errors.New("Test End"), ctx.GetStatusCode())
 	return
+}
+
+func rabbitMqSetTktInfo(tktInfo Object.TktCreateInfo) error {
+	common.MyLog(tktInfo.Queue)
+	common.MyLog(tktInfo.MessageRoute)
+	valStr, err := json.Marshal(tktInfo)
+	if err != nil {
+		common.MyLog(string(valStr))
+	}
+	err = global.RabbitMQ.Publish("", "amq.fanout", tktInfo.MessageRoute, string(valStr))
+	if err != nil {
+		common.MyLog(string(valStr))
+	}
+	return nil
 }
 
 func redisSetTktModel(tktModels []Object.TktModel, redisDbid int) error {

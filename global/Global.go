@@ -10,7 +10,7 @@ import (
 
 var Config SysConfig
 var Redis go_tool.MyRedis
-var RabbitMQ go_tool.MyRabbitMQ
+var RabbitMQ *go_tool.MyRabbitMQ
 var RedisDbId1 int
 var RedisDbId2 int
 var SnoServer string

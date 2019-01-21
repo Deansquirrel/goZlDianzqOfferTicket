@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Deansquirrel/go-tool"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/common"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/global"
 	"github.com/Deansquirrel/goZlDianzqOfferTicket/repository"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -160,15 +162,11 @@ func refreshConfig() error {
 	if len(rabbitMQConfig) != 5 {
 		return errors.New("rabbitMQ配置参数异常.expected 5 , got " + strconv.Itoa(len(rabbitMQConfig)))
 	}
-	global.RabbitMQ.Server = rabbitMQConfig[0]
 	rabbitMQPort, err := strconv.Atoi(rabbitMQConfig[1])
 	if err != nil {
 		return err
 	}
-	global.RabbitMQ.Port = rabbitMQPort
-	global.RabbitMQ.VirtualHost = rabbitMQConfig[2]
-	global.RabbitMQ.User = rabbitMQConfig[3]
-	global.RabbitMQ.Pwd = rabbitMQConfig[4]
+	global.RabbitMQ = go_tool.NewRabbitMQ(rabbitMQConfig[3], rabbitMQConfig[4], rabbitMQConfig[0], rabbitMQPort, rabbitMQConfig[2], time.Second*60, time.Millisecond*500, 3, time.Second*5)
 
 	//获取SnoServer信息
 	global.SnoServer, err = pZhR.GetXtWxAppIdJoinInfo(global.Config.TotalConfig.JPeiZh, "SnoServer", 0)
@@ -184,6 +182,38 @@ func refreshConfig() error {
 		return err
 	}
 	global.SnoWorkerId, err = strconv.Atoi(snoWorkIdStr)
+	if err != nil {
+		return err
+	}
+
+	err = rabbitMqInit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func rabbitMqInit() error {
+	conn, err := global.RabbitMQ.GetConn()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = conn.Close()
+	}()
+
+	err = global.RabbitMQ.QueueDeclareSimple(conn, "TktCreateYwdetail")
+	if err != nil {
+		return err
+	}
+
+	err = global.RabbitMQ.QueueBind(conn, "TktCreateYwdetail", "", "amq.fanout", true)
+	if err != nil {
+		return err
+	}
+
+	err = global.RabbitMQ.AddProducer("")
 	if err != nil {
 		return err
 	}
